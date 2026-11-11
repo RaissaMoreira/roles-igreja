@@ -18,6 +18,7 @@ import {
   type MinhaInscricao,
 } from '../lib/util'
 import PixPagamento from '../components/PixPagamento'
+import PixMercadoPago from '../components/PixMercadoPago'
 import ListasEvento from '../components/ListasEvento'
 import { useModal } from '../components/Modal'
 
@@ -173,6 +174,13 @@ export default function EventoPage() {
     carregarInscricoes()
   }
 
+  function pagamentoConfirmado() {
+    if (!evento || !minha) return
+    const atualizada = { ...minha, pagou: true, confirmado: true }
+    salvarInscricao(evento.id, atualizada)
+    setMinha(atualizada)
+  }
+
   async function informarPagamento() {
     if (!evento || !minha?.token) return
     if (!(await perguntar({ titulo: 'Já fez o Pix?', mensagem: 'A organização vai receber o aviso e conferir o pagamento.', ok: 'Sim, já paguei', cancelar: 'Ainda não' }))) return
@@ -196,7 +204,8 @@ export default function EventoPage() {
   }
 
   const maps = linkMaps(evento.local, evento.maps_url)
-  const temPix = Boolean(evento.valor && evento.valor > 0 && evento.chave_pix)
+  const pixAuto = Boolean(evento.pix_automatico)
+  const temPix = Boolean(evento.valor && evento.valor > 0 && (evento.chave_pix || pixAuto))
   const pagou = Boolean(minha?.pagou)
   // "talvez" e "não vou" não pagam; inscrição antiga (sem presença salva) ainda vê o Pix
   const deveVerPix = temPix && !pagou && (minha ? minha.presenca === 'confirmado' || minha.presenca === null : true)
@@ -244,7 +253,22 @@ export default function EventoPage() {
           <section className="card card-brilho col-2">
             <h3>Pix</h3>
             {pagou ? (
-              <div className="alerta alerta-ok">Pagamento informado ✓ — a organização vai conferir.</div>
+              minha?.confirmado ? (
+                <div className="alerta alerta-ok">Pagamento confirmado ✓ Valeu! Te esperamos lá 🎉</div>
+              ) : (
+                <div className="alerta alerta-ok">Pagamento informado ✓ — a organização vai conferir.</div>
+              )
+            ) : (mostrarPix || minha) && pixAuto && minha?.token ? (
+              <>
+                <PixMercadoPago inscricaoId={minha.id} token={minha.token} valor={evento.valor!} onPago={pagamentoConfirmado} />
+                <button className="link-simples link-paguei" onClick={informarPagamento} disabled={informando}>
+                  Paguei e não confirmou? Avisar a organização
+                </button>
+              </>
+            ) : (mostrarPix || minha) && !evento.chave_pix ? (
+              <p className="dica">
+                Para pagar, abra este link no mesmo celular em que você respondeu a lista. Se não der, fale com a organização.
+              </p>
             ) : mostrarPix || minha ? (
               <>
                 <PixPagamento

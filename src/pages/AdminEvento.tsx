@@ -50,6 +50,7 @@ type Form = {
   recebedor_cidade: string
   avisos: string
   status: StatusEvento
+  pix_automatico: boolean
 }
 
 const FORM_VAZIO: Form = {
@@ -64,6 +65,7 @@ const FORM_VAZIO: Form = {
   recebedor_cidade: '',
   avisos: '',
   status: 'aberto',
+  pix_automatico: false,
 }
 
 const vazioParaNull = (v: string) => (v.trim() === '' ? null : v.trim())
@@ -132,6 +134,7 @@ export default function AdminEvento() {
           recebedor_cidade: ev.recebedor_cidade ?? '',
           avisos: ev.avisos ?? '',
           status: ev.status,
+          pix_automatico: ev.pix_automatico ?? false,
         })
       })
     carregarInscricoes()
@@ -152,7 +155,7 @@ export default function AdminEvento() {
     const chave = form.chave_pix.trim() ? normalizarChavePix(form.chave_pix) : null
     if (chave && 'erro' in chave) return avisar('Chave Pix inválida', chave.erro)
 
-    if (valor > 0 && !chave) {
+    if (valor > 0 && !chave && !form.pix_automatico) {
       const seguir = await confirmar({
         titulo: 'Rolê pago sem chave Pix',
         mensagem: 'Sem a chave Pix o pessoal não vai conseguir pagar pelo app. Salvar mesmo assim?',
@@ -185,6 +188,7 @@ export default function AdminEvento() {
       recebedor_cidade: vazioParaNull(form.recebedor_cidade),
       avisos: vazioParaNull(form.avisos),
       status: form.status,
+      pix_automatico: form.pix_automatico,
     }
 
     setSalvando(true)
@@ -195,6 +199,7 @@ export default function AdminEvento() {
         chave_pix: chave ? chave.chave : '',
         recebedor_nome: form.recebedor_nome,
         recebedor_cidade: form.recebedor_cidade,
+        pix_automatico: form.pix_automatico,
       }),
     )
 
@@ -216,8 +221,9 @@ export default function AdminEvento() {
 
   async function alternarPagamento(i: Inscricao) {
     const pagamento: StatusPagamento = i.pagamento === 'pago' ? 'pendente' : 'pago'
-    setInscricoes((lista) => lista.map((x) => (x.id === i.id ? { ...x, pagamento } : x)))
-    const { error } = await supabase.from('inscricoes').update({ pagamento }).eq('id', i.id)
+    setInscricoes((lista) => lista.map((x) => (x.id === i.id ? { ...x, pagamento, pago_em: null } : x)))
+    // pago_em só fica preenchido quando quem confirmou foi o Mercado Pago
+    const { error } = await supabase.from('inscricoes').update({ pagamento, pago_em: null }).eq('id', i.id)
     if (error) {
       avisar('Não deu para atualizar o pagamento', mensagemErro(error))
       carregarInscricoes()
@@ -292,7 +298,7 @@ export default function AdminEvento() {
         cancelar: 'Voltar',
       })
       if (!seguir) return
-    } else if (evento.valor && !evento.chave_pix) {
+    } else if (evento.valor && !evento.chave_pix && !evento.pix_automatico) {
       const seguir = await confirmar({
         titulo: 'Falta a chave Pix',
         mensagem: 'O rolê é pago, mas não tem chave Pix cadastrada. Quem confirmar não vai conseguir pagar pelo app.',
@@ -338,7 +344,7 @@ export default function AdminEvento() {
 
       {mensagem && <div className="alerta alerta-ok">{mensagem}</div>}
 
-      {!novo && evento && evento.valor && !evento.chave_pix ? (
+      {!novo && evento && evento.valor && !evento.chave_pix && !evento.pix_automatico ? (
         <div className="alerta alerta-aviso">
           ⚠ Este rolê cobra {moeda(evento.valor)}, mas não tem chave Pix. Preencha a chave lá embaixo para o pessoal conseguir pagar.
         </div>
@@ -392,7 +398,7 @@ export default function AdminEvento() {
             <p className="dica">Ninguém se inscreveu ainda. Manda o link no grupo!</p>
           ) : (
             <div className="tabela-wrap">
-              <table className="tabela">
+              <table className="tabela tabela-pessoas">
                 <thead>
                   <tr>
                     <th>Nome</th>
@@ -405,13 +411,13 @@ export default function AdminEvento() {
                 <tbody>
                   {inscricoes.map((i) => (
                     <tr key={i.id}>
-                      <td>{i.nome}</td>
-                      <td>
+                      <td className="td-nome">{i.nome}</td>
+                      <td className="td-fone">
                         <a href={`https://wa.me/55${i.telefone}`} target="_blank" rel="noreferrer">
                           {formatarTelefone(i.telefone)}
                         </a>
                       </td>
-                      <td>
+                      <td className="td-presenca">
                         <select
                           className="select-tabela"
                           value={i.presenca}
@@ -426,7 +432,7 @@ export default function AdminEvento() {
                         </select>
                       </td>
                       {valorUnit > 0 && (
-                        <td>
+                        <td className="td-pagamento">
                           {i.presenca === 'nao_vou' && i.pagamento === 'pendente' ? (
                             <span className="dica">—</span>
                           ) : (
@@ -435,12 +441,12 @@ export default function AdminEvento() {
                               onClick={() => alternarPagamento(i)}
                               title={i.pagamento === 'pago' ? 'Clique para voltar a pendente' : 'Clique para confirmar o pagamento'}
                             >
-                              {ROTULO_PAGAMENTO[i.pagamento]}
+                              {i.pagamento === 'pago' && i.pago_em ? '✓ pago ⚡ automático' : ROTULO_PAGAMENTO[i.pagamento]}
                             </button>
                           )}
                         </td>
                       )}
-                      <td>
+                      <td className="td-acoes">
                         <button className="link-perigo" onClick={() => remover(i)}>
                           remover
                         </button>
@@ -490,8 +496,22 @@ export default function AdminEvento() {
         </label>
 
         <h3>Pix</h3>
+        <label className="opcao-check">
+          <input
+            type="checkbox"
+            checked={form.pix_automatico}
+            onChange={(e) => setForm((f) => ({ ...f, pix_automatico: e.target.checked }))}
+          />
+          <span>
+            Confirmar pagamento automaticamente (Mercado Pago)
+            <small>
+              Cada pessoa recebe um Pix gerado pelo Mercado Pago e o app marca "pago" sozinho quando o dinheiro cai. Precisa da
+              configuração do Mercado Pago no Supabase (veja o README).
+            </small>
+          </span>
+        </label>
         <label>
-          Chave Pix
+          {form.pix_automatico ? 'Chave Pix reserva (opcional)' : 'Chave Pix'}
           <input value={form.chave_pix} onChange={set('chave_pix')} placeholder="CPF, e-mail, +5542999998888 ou chave aleatória" />
           {chaveDigitada &&
             ('erro' in chaveDigitada ? (
@@ -512,7 +532,11 @@ export default function AdminEvento() {
             <input value={form.recebedor_cidade} onChange={set('recebedor_cidade')} maxLength={15} placeholder="Ponta Grossa" />
           </label>
         </div>
-        <p className="dica">Confira a chave acima antes de salvar: se ela não existir no banco, o Pix dá "chave não encontrada".</p>
+        <p className="dica">
+          {form.pix_automatico
+            ? 'A chave reserva aparece só para quem abrir o rolê num celular diferente do que usou para responder (aí o pagamento é conferido à mão).'
+            : 'Confira a chave acima antes de salvar: se ela não existir no banco, o Pix dá "chave não encontrada".'}
+        </p>
 
         <label>
           Inscrições

@@ -59,6 +59,7 @@ code { background: var(--muted); padding: 0 4px; border-radius: 4px; }
   background: none; font-family: inherit; cursor: pointer;
 }
 .btn-pilula:hover { color: var(--texto); }
+.topo { padding-top: max(1.5rem, env(safe-area-inset-top)); }
 .conteudo { flex: 1; width: 100%; max-width: 64rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
 .conteudo-estreito { max-width: 48rem; margin: 0 auto; }
 
@@ -178,6 +179,17 @@ code { background: var(--muted); padding: 0 4px; border-radius: 4px; }
 .pix-qr { width: 200px; height: 200px; border-radius: var(--raio); align-self: center; background: #fff; padding: 6px; }
 .pix-chave { background: var(--muted); border-radius: var(--raio); padding: 1rem; }
 .pix-info { font-size: 0.875rem; margin: 0; color: var(--texto-suave); }
+.pix-codigo { font-size: 0.75rem; max-height: 4.5rem; overflow-y: auto; }
+.pix-aguardando {
+  display: flex; align-items: center; gap: 0.6rem; margin: 0.25rem 0 0;
+  font-size: 0.875rem; color: var(--destaque);
+}
+.ponto-pulsando {
+  width: 0.6rem; height: 0.6rem; border-radius: 999px; background: var(--destaque); flex-shrink: 0;
+  animation: pulsar 1.6s ease-in-out infinite;
+}
+@keyframes pulsar { 50% { opacity: 0.25; transform: scale(0.8); } }
+.link-paguei { display: block; margin: 1rem auto 0; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; font-size: 0.875rem; }
 
 /* Botões */
@@ -228,6 +240,12 @@ code { background: var(--muted); padding: 0 4px; border-radius: 4px; }
 .opcao.ativa { border-color: var(--destaque); background: oklch(78% 0.14 150 / 0.12); color: var(--destaque); }
 .mensagem { margin: 0; text-align: center; font-weight: 700; color: var(--primario); }
 .login { max-width: 420px; margin: 2rem auto; }
+.form label.opcao-check {
+  display: flex; gap: 0.75rem; align-items: flex-start; cursor: pointer;
+  border: 1px solid var(--borda); border-radius: var(--raio); padding: 0.9rem 1rem; background: var(--fundo);
+}
+.form label.opcao-check input { margin-top: 0.2rem; width: 1.1rem; height: 1.1rem; flex-shrink: 0; }
+.form label.opcao-check span { display: grid; gap: 0.25rem; }
 .form small.chave-ok { color: var(--destaque); font-weight: 700; }
 .form small.chave-erro { color: var(--perigo); font-weight: 700; }
 .centro { text-align: center; }
@@ -254,6 +272,7 @@ code { background: var(--muted); padding: 0 4px; border-radius: 4px; }
 .item-quem { color: var(--texto-suave); font-size: 0.875rem; text-align: right; }
 .admin-lista { border: 1px solid var(--borda); border-radius: var(--raio); padding: 1rem; margin-bottom: 1rem; background: var(--fundo); }
 .admin-lista-topo { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.admin-lista-topo .link-perigo, .item-quem .link-perigo { white-space: nowrap; flex-shrink: 0; }
 .linha-inline { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
 .linha-inline input { flex: 1; min-width: 0; }
 
@@ -280,6 +299,9 @@ code { background: var(--muted); padding: 0 4px; border-radius: 4px; }
   border: 1px solid var(--borda); border-radius: 999px; padding: 0.25rem 0.6rem; cursor: pointer;
 }
 .tabela td { padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--borda); }
+.tabela-pessoas .td-nome { font-weight: 700; }
+.tabela-pessoas .td-fone, .tabela-pessoas .td-pagamento { white-space: nowrap; }
+.tabela-pessoas .td-acoes { text-align: right; }
 
 /* Notificações (admin) */
 .sino { position: relative; }
@@ -296,7 +318,13 @@ code { background: var(--muted); padding: 0 4px; border-radius: 4px; }
   background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio-grande);
   box-shadow: 0 20px 50px -10px #000a; overflow: hidden;
 }
-.sino-topo { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 1rem; }
+.sino-fundo { position: fixed; inset: 0; z-index: -1; }
+.sino-topo { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.9rem 1rem; }
+.sino-topo-acoes { display: flex; align-items: center; gap: 0.75rem; }
+.sino-fechar {
+  width: 1.9rem; height: 1.9rem; border-radius: 999px; border: 1px solid var(--borda);
+  background: var(--secundario); color: var(--texto-suave); cursor: pointer; font-size: 0.8rem;
+}
 .sino-prefs {
   display: grid; gap: 0.35rem; padding: 0.7rem 1rem; font-size: 0.875rem;
   background: var(--secundario); border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda);
@@ -337,15 +365,74 @@ code { background: var(--muted); padding: 0 4px; border-radius: 4px; }
 .modal-acoes { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; flex-wrap: wrap; }
 @keyframes modal-surgir { from { opacity: 0; } }
 
+/* Convite para instalar o app */
+.instalar-barra {
+  position: fixed; z-index: 50; left: 0.75rem; right: 0.75rem;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  max-width: 34rem; margin: 0 auto;
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.9rem;
+  background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio-grande);
+  box-shadow: 0 16px 40px -12px #000c;
+}
+.instalar-icone { width: 2.6rem; height: 2.6rem; border-radius: 0.7rem; flex-shrink: 0; }
+.instalar-texto { flex: 1; min-width: 0; display: grid; font-size: 0.85rem; line-height: 1.3; }
+.instalar-texto span { color: var(--texto-suave); }
+.instalar-barra .btn { padding: 0.55rem 0.9rem; }
+.instalar-fechar {
+  background: none; border: none; color: var(--texto-suave); cursor: pointer; font-size: 0.9rem; padding: 0.25rem;
+}
+.instalar-passos { margin: 0.9rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.6rem; color: var(--texto-suave); }
+.instalar-passos strong { color: var(--texto); }
+.instalar-simbolo {
+  display: inline-block; border: 1px solid var(--borda); border-radius: 0.4rem; padding: 0 0.35rem; color: var(--primario);
+}
+
 @media (max-width: 768px) {
   .grade { grid-template-columns: 1fr; }
   .col-2, .col-3, .col-5 { grid-column: auto; }
 }
 
+@media (max-width: 640px) {
+  /* Tabela de quem respondeu vira uma lista de cards */
+  .tabela-pessoas thead { display: none; }
+  .tabela-pessoas, .tabela-pessoas tbody { display: block; }
+  .tabela-pessoas tr {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.35rem 0.75rem;
+    grid-template-areas: 'nome acoes' 'fone fone' 'presenca pagamento';
+    padding: 0.85rem 0; border-bottom: 1px solid var(--borda);
+  }
+  .tabela-pessoas tr:last-child { border-bottom: none; }
+  .tabela-pessoas td { display: block; padding: 0; border: none; min-width: 0; }
+  .tabela-pessoas .td-nome { grid-area: nome; font-size: 1rem; overflow-wrap: anywhere; }
+  .tabela-pessoas .td-fone { grid-area: fone; font-size: 0.875rem; }
+  .tabela-pessoas .td-presenca { grid-area: presenca; }
+  .tabela-pessoas .td-pagamento { grid-area: pagamento; justify-self: end; }
+  .tabela-pessoas .td-acoes { grid-area: acoes; }
+
+  /* Listas de quem leva o quê: item em cima, nomes embaixo */
+  .lista-itens li { flex-direction: column; align-items: stretch; gap: 0.4rem; }
+  .item-quem { text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+  .item-marcavel { width: 100%; }
+  .admin-lista { padding: 0.85rem; }
+  .admin-lista-topo { align-items: flex-start; }
+  .admin-lista-topo strong { overflow-wrap: anywhere; }
+
+  /* Notificações ocupam a largura da tela */
+  .sino-painel {
+    position: fixed; top: 4.5rem; left: 0.75rem; right: 0.75rem; width: auto;
+    max-height: calc(100dvh - 5.5rem); display: flex; flex-direction: column;
+  }
+  .sino-fundo { z-index: 0; background: oklch(10% 0.02 150 / 0.6); }
+  .sino-painel { z-index: 1; }
+  .sino-lista { max-height: none; flex: 1; min-height: 0; }
+  .sino-topo-acoes .link-simples { font-size: 0.8rem; }
+}
+
 @media (max-width: 560px) {
+  .instalar-texto span { display: none; }
   .linha, .stats { grid-template-columns: 1fr; }
   .opcao { padding: 0.65rem 0.3rem; font-size: 0.85rem; }
   .card { padding: 1.25rem; }
-  .topo { padding: 1.25rem 1rem; }
+  .topo { padding: max(1.25rem, env(safe-area-inset-top)) 1rem 1.25rem; }
   .conteudo { padding: 0 1rem 4rem; }
 }

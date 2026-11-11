@@ -122,15 +122,21 @@ export default function Notificacoes() {
         🔔{naoLidas > 0 && <span className="sino-contador">{naoLidas > 9 ? '9+' : naoLidas}</span>}
       </button>
 
+      {aberto && <div className="sino-fundo" onClick={() => setAberto(false)} />}
       {aberto && (
         <div className="sino-painel">
           <div className="sino-topo">
             <strong>Notificações</strong>
-            {naoLidas > 0 && (
-              <button className="link-simples" onClick={marcarLidas}>
-                marcar como lidas
+            <div className="sino-topo-acoes">
+              {naoLidas > 0 && (
+                <button className="link-simples" onClick={marcarLidas}>
+                  marcar todas como lidas
+                </button>
+              )}
+              <button className="sino-fechar" onClick={() => setAberto(false)} aria-label="Fechar notificações">
+                ✕
               </button>
-            )}
+            </div>
           </div>
 
           <div className="sino-prefs">

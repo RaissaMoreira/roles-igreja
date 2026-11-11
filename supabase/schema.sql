@@ -47,6 +47,14 @@ alter table public.inscricoes add constraint inscricoes_pagamento_check
 
 create index if not exists inscricoes_evento_idx on public.inscricoes (evento_id);
 
+-- Pix automático pelo Mercado Pago (o pagamento é confirmado sozinho)
+alter table public.eventos    add column if not exists pix_automatico boolean not null default false;
+alter table public.inscricoes add column if not exists mp_payment_id text;          -- id do pagamento no Mercado Pago
+alter table public.inscricoes add column if not exists mp_qr_code    text;          -- Pix copia e cola gerado pelo MP
+alter table public.inscricoes add column if not exists mp_qr_base64  text;          -- imagem do QR Code
+alter table public.inscricoes add column if not exists mp_expira_em  timestamptz;
+alter table public.inscricoes add column if not exists pago_em       timestamptz;
+
 -- Quem pode administrar (organização)
 create table if not exists public.admins (
   user_id uuid primary key references auth.users(id) on delete cascade
@@ -215,6 +223,10 @@ begin
                     else '"Não vou"'
                   end || ' — ' || v_titulo
     );
+  elsif new.pagamento = 'pago' and old.pagamento is distinct from 'pago' and not public.is_admin() then
+    -- só o Mercado Pago (via Edge Function) marca "pago" sem ser admin
+    insert into notificacoes (evento_id, tipo, mensagem)
+    values (new.evento_id, 'pagamento', new.nome || ' pagou o Pix ✓ (confirmado pelo Mercado Pago) — ' || v_titulo);
   elsif new.pagamento = 'informado' and old.pagamento is distinct from 'informado' then
     insert into notificacoes (evento_id, tipo, mensagem)
     values (new.evento_id, 'pagamento', new.nome || ' disse que pagou o Pix — ' || v_titulo);

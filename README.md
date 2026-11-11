@@ -48,6 +48,61 @@ Abra <http://localhost:5173>. A área de admin fica em `/admin`.
 
 ---
 
+## 5. Pix automático com Mercado Pago (opcional)
+
+Com isso ligado, cada pessoa recebe um Pix gerado pelo Mercado Pago e **o app marca "pago" sozinho** assim que o dinheiro cai (o admin também recebe a notificação no sino). Sem isso, o app continua funcionando com a chave Pix comum e o "Já paguei".
+
+> O Mercado Pago cobra uma taxa por Pix recebido — confira a tabela atual na sua conta. O dinheiro cai no saldo do Mercado Pago.
+
+### 5.1 No Mercado Pago
+
+1. Tenha uma conta no Mercado Pago (pode ser de pessoa física) **com uma chave Pix cadastrada** nela (app do Mercado Pago > Pix > Minhas chaves).
+2. Entre em <https://www.mercadopago.com.br/developers/panel> > **Criar aplicação**. Em tipo de solução escolha **Pagamentos online** e, se perguntar, **Checkout Transparente / API**.
+3. Na aplicação criada, abra **Credenciais de produção** e copie o **Access Token** (começa com `APP_USR-`). Ele é secreto: não coloque no `.env` nem no GitHub.
+
+### 5.2 No Supabase (pelo terminal do Trae, na pasta do projeto)
+
+O `SEU-PROJETO` é o código que aparece na sua URL do Supabase (`https://SEU-PROJETO.supabase.co`).
+
+```bash
+npx supabase login
+npx supabase link --project-ref SEU-PROJETO
+
+# Access Token do Mercado Pago + um e-mail da organização para aparecer como pagador
+# (o MP exige um e-mail e o app não pede e-mail das pessoas; use um e-mail DIFERENTE do da conta MP)
+npx supabase secrets set MP_ACCESS_TOKEN=APP_USR-xxxxxxxx MP_EMAIL_PAGADOR=juventude@exemplo.com
+
+npx supabase functions deploy mp-pix
+npx supabase functions deploy mp-webhook --no-verify-jwt
+```
+
+O `--no-verify-jwt` no `mp-webhook` é obrigatório: o Mercado Pago não manda login do Supabase. A função é segura mesmo assim, porque nunca confia no aviso — ela sempre consulta o pagamento direto na API do Mercado Pago antes de marcar "pago".
+
+### 5.3 (Recomendado) Assinatura do webhook
+
+Na sua aplicação do Mercado Pago > **Webhooks** > **Configurar notificações**:
+- URL de produção: `https://SEU-PROJETO.supabase.co/functions/v1/mp-webhook`
+- Evento: **Pagamentos**
+- Salve e copie a **assinatura secreta**, depois rode:
+
+```bash
+npx supabase secrets set MP_WEBHOOK_SECRET=a-assinatura-secreta
+```
+
+### 5.4 Ligar no rolê
+
+No painel do rolê, seção **Pix**, marque **Confirmar pagamento automaticamente (Mercado Pago)** e salve. A chave Pix comum vira "reserva": só aparece para quem abrir o link num celular diferente do que usou para responder.
+
+**Teste antes de divulgar:** crie um rolê de R$ 1,00, responda "Vou" pelo celular, pague o Pix e veja o status virar "✓ pago ⚡ automático" no painel. Se não virar, veja os logs em Supabase > Edge Functions > mp-webhook / mp-pix > Logs.
+
+## 6. Instalar como app no celular
+
+O site já é um app instalável (PWA). Depois do deploy, quem abrir pelo celular vê a barra **"Instale o app dos Rolês"**:
+- **Android (Chrome):** toca em **Instalar** e o ícone da Alcance vai para a tela inicial.
+- **iPhone (Safari):** o app mostra o passo a passo — botão **Compartilhar** > **Adicionar à Tela de Início**.
+
+Instalado, ele abre em tela cheia, sem a barra do navegador. Quem fechar a barra só a vê de novo depois de 14 dias.
+
 ## Como funciona
 
 | Quem | O que faz |
@@ -79,11 +134,13 @@ src/
   components/           PixPagamento, RequireAdmin
   pages/                Home, EventoPage, Login, AdminEventos, AdminEvento
 supabase/schema.sql     tabelas, permissões e RLS
+supabase/functions/     Edge Functions do Mercado Pago (mp-pix, mp-webhook)
+public/sw.js            service worker (app instalável)
+public/manifest.webmanifest  nome, cores e ícones do app
 ```
 
 ## Próximos passos (ideias)
 
-- **Mercado Pago:** criar o Pix por uma Supabase Edge Function e receber o webhook para marcar "pago" automaticamente.
 - **Preview bonito no WhatsApp por evento:** precisa de renderização no servidor (ex.: migrar para Next.js ou criar uma função na Vercel que gere as meta tags).
 - Caronas e divisão de gastos.
-- Notificação no celular com o site fechado (Web Push com service worker + Edge Function).
+- Notificação no celular com o site fechado (Web Push: o service worker já existe, falta a Edge Function que envia).

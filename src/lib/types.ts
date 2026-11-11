@@ -21,6 +21,8 @@ export type Evento = {
   recebedor_cidade: string | null
   avisos: string | null
   status: StatusEvento
+  /** true = Pix gerado pelo Mercado Pago e confirmado automaticamente */
+  pix_automatico: boolean
   criado_em: string
 }
 
@@ -34,7 +36,13 @@ export type InscricaoPublica = {
 }
 
 /** Visão completa, só para admins. */
-export type Inscricao = InscricaoPublica & { telefone: string; pagamento: StatusPagamento; token: string }
+export type Inscricao = InscricaoPublica & {
+  telefone: string
+  pagamento: StatusPagamento
+  token: string
+  mp_payment_id: string | null
+  pago_em: string | null
+}
 
 export const COLUNAS_PUBLICAS = 'id,evento_id,nome,presenca,criado_em'
 

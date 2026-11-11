@@ -116,6 +116,8 @@ export type MinhaInscricao = {
   token: string | null
   presenca: Presenca | null
   pagou: boolean
+  /** pagamento confirmado pelo Mercado Pago (não só "avisei que paguei") */
+  confirmado?: boolean
 }
 
 export function lerInscricao(eventoId: string): MinhaInscricao | null {
@@ -124,7 +126,13 @@ export function lerInscricao(eventoId: string): MinhaInscricao | null {
   try {
     const salvo = JSON.parse(bruto)
     if (salvo && typeof salvo.id === 'string') {
-      return { id: salvo.id, token: salvo.token ?? null, presenca: salvo.presenca ?? null, pagou: Boolean(salvo.pagou) }
+      return {
+        id: salvo.id,
+        token: salvo.token ?? null,
+        presenca: salvo.presenca ?? null,
+        pagou: Boolean(salvo.pagou),
+        confirmado: Boolean(salvo.confirmado),
+      }
     }
   } catch {
     /* versão antiga: só o id, sem aspas */

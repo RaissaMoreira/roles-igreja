@@ -14,3 +14,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </React.StrictMode>,
 )
+
+// Deixa o site instalável como app (só no build de produção, para não atrapalhar o npm run dev)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('Service worker não registrado', e))
+  })
+}

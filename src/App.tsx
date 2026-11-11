@@ -3,6 +3,7 @@ import { configurado } from './lib/supabase'
 import { useAdmin } from './lib/auth'
 import RequireAdmin from './components/RequireAdmin'
 import Notificacoes from './components/Notificacoes'
+import InstalarApp from './components/InstalarApp'
 import Home from './pages/Home'
 import EventoPage from './pages/EventoPage'
 import Login from './pages/Login'
@@ -65,6 +66,8 @@ export default function App() {
           />
         </Routes>
       </main>
+
+      <InstalarApp />
     </div>
   )
 }
